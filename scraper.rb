@@ -2,7 +2,7 @@ require 'scraperwiki'
 require 'mechanize'
 require 'date'
 
-url = 'http://www.charterstowers.qld.gov.au/web/guest/planning-and-development-services'
+url = 'http://www.charterstowers.qld.gov.au/recently-submitted-applications'
 agent = Mechanize.new
 
 page = agent.get url
@@ -26,7 +26,7 @@ table.search(:tr).each_with_index do |row,number|
     comment_url:       'mailto:mail@charterstowers.qld.gov.au', 
     date_scraped:      Date.today
   }
-
+  # puts record.to_yaml
   if (ScraperWiki.select("* from data where `council_reference`='#{record[:council_reference]}'").empty? rescue true)
     ScraperWiki.save_sqlite([:council_reference], record)
   else
