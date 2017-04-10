@@ -15,7 +15,7 @@ table.search(:tr).each_with_index do |row,number|
   columns = row.search(:td)
 
 
-   date_received = Date.strptime(columns[1].inner_text.strip, '%d/%m/%Y')
+  date_received = Date.strptime(columns[1].inner_text.strip, '%d/%m/%Y') rescue nil
   
   record = {
     council_reference: columns[0].inner_text,
