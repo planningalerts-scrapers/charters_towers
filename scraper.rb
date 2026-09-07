@@ -77,6 +77,14 @@ class Scraper
     @agent = Mechanize.new
     @agent.user_agent = USER_AGENT
     @agent.request_headers = REQUEST_HEADERS.dup
+    if ENV["MORPH_AUSTRALIAN_PROXY"]
+      # On morph.io set the environment variable MORPH_AUSTRALIAN_PROXY to
+      # http://morph:password@au.proxy.oaf.org.au:8888 replacing password with
+      # the real password.
+      puts "Using Australian proxy..."
+      @agent.agent.set_proxy(ENV["MORPH_AUSTRALIAN_PROXY"])
+    end
+    @debug = !ENV["MORPH_DEBUG"].to_s.empty?
     @seen = {}
     @saved = 0
   end
@@ -112,6 +120,7 @@ class Scraper
       next if heading.empty? || heading.match?(/\A\d{4}\s/)
 
       match = REF_RE.match(heading)
+      debug "Skipping accordion with no reference: #{heading.inspect}" if match.nil?
       next if match.nil? || @seen[canonical_ref(match)]
 
       save_accordion(article, heading, match, url)
@@ -121,7 +130,10 @@ class Scraper
 
   def save_accordion(article, heading, match, url)
     address, heading_desc = split_heading(heading, match)
-    return if address.empty?
+    if address.empty?
+      debug "Skipping accordion with no address: #{heading.inspect}"
+      return
+    end
 
     para = first_paragraph(article)
     description = para ? description_from(para) : heading_desc
@@ -146,10 +158,14 @@ class Scraper
     link.search("span.file-info").each(&:remove)
     text = clean_text(link.text)
     match = REF_RE.match(text)
+    debug "Skipping notice link with no reference: #{text.inspect}" if match.nil?
     return if match.nil? || @seen[canonical_ref(match)]
 
     record = parse_notice_text(text, match)
-    return if record.nil?
+    if record.nil?
+      debug "Skipping notice link with no address: #{text.inspect}"
+      return
+    end
 
     save(canonical_ref(match), record[:address], record[:description], url)
   end
@@ -251,20 +267,25 @@ class Scraper
     puts "#{url.split('/').last}: #{count} applications from #{source}" if count.positive?
   end
 
+  def debug(message)
+    puts message if @debug
+  end
+
   def ensure_qld(address)
     address.match?(/\bQLD\b/i) ? address : "#{address}, QLD"
   end
 
   def save(ref, address, description, url)
     @seen[ref] = true
-    ScraperWiki.save_sqlite(
-      ["council_reference"],
+    record = {
       "council_reference" => ref,
       "address" => ensure_qld(address),
       "description" => description,
       "info_url" => url,
-      "date_scraped" => Date.today.to_s
-    )
+      "date_scraped" => Date.today.to_s,
+    }
+    debug "RECORD: #{record.inspect}"
+    ScraperWiki.save_sqlite(["council_reference"], record)
     @saved += 1
   end
 end

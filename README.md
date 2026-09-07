@@ -20,6 +20,11 @@ bundle install
 bundle exec ruby scraper.rb
 ```
 
+Environment variables:
+
+- `MORPH_AUSTRALIAN_PROXY` - optional; when set (e.g. `http://morph:password@au.proxy.oaf.org.au:8888`) all requests go through the Australian proxy.
+- `MORPH_DEBUG` - optional; when set, prints each record as it is saved and the reason for every skipped accordion or notice link.
+
 Expected output is a per-year-page count of records found followed by:
 
 ```
